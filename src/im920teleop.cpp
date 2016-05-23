@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 	ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel_out", 1);
 	ros::Subscriber sub = nh.subscribe("cmd_vel_in", 1, cb);
 	
-	ros::Rate wait(100);
+	ros::Rate wait(4);
 	while(ros::ok())
 	{
 		ros::spinOnce();
