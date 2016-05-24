@@ -56,7 +56,7 @@ int main(int argc, char** argv)
 				short vel = msg->linear.x * 1000;
 				short avel = msg->angular.z * 1000;
 				sprintf(buf, "TXDA %04X%04X\r\n", 
-						(unsigned int)vel, (unsigned int)avel);
+						(unsigned short)vel, (unsigned short)avel);
 				write(fd, buf, strlen(buf));
 			};
 
