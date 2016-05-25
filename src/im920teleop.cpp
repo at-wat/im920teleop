@@ -50,6 +50,10 @@ int main(int argc, char** argv)
 	tcflush(fd, TCIFLUSH);
 	tcsetattr(fd, TCSANOW, &newtio);
 
+	ros::Time last_interrupt = ros::Time::now();
+
+	ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel_out", 1);
+
 	const boost::function<void(const geometry_msgs::Twist::ConstPtr&)> cb = 
 		[&](const geometry_msgs::Twist::ConstPtr &msg)->void{
 				char buf[256];
@@ -59,9 +63,16 @@ int main(int argc, char** argv)
 						(unsigned short)vel, (unsigned short)avel);
 				write(fd, buf, strlen(buf));
 			};
+	const boost::function<void(const geometry_msgs::Twist::ConstPtr&)> cb_ow = 
+		[&](const geometry_msgs::Twist::ConstPtr &msg)->void{
+				if(ros::Time::now() - last_interrupt > ros::Duration(1.0))
+				{
+					pub.publish(*msg);
+				}
+			};
 
-	ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel_out", 1);
 	ros::Subscriber sub = nh.subscribe("cmd_vel_in", 1, cb);
+	ros::Subscriber sub_ow = nh.subscribe("cmd_vel_overwritten", 1, cb_ow);
 	
 	ros::Rate wait(4);
 	while(ros::ok())
@@ -87,6 +98,8 @@ int main(int argc, char** argv)
 		msg.linear.x = vel * 0.001;
 		msg.angular.z = avel * 0.001;
 		pub.publish(msg);
+
+		last_interrupt = ros::Time::now();
 	}
 
 	tcsetattr(fd, TCSANOW, &oldtio);
