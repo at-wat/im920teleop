@@ -84,6 +84,21 @@ int main(int argc, char** argv)
 		int n_read = read(fd, buf, 255);
 		if(n_read < 1)
 		{
+			if(n_read == 0)
+			{
+				ros::shutdown();
+				continue;
+			}
+			if(errno == EAGAIN || errno == EWOULDBLOCK)
+			{
+				continue;
+			}
+			ros::shutdown();
+			continue;
+		}
+		if(n_read != 22)
+		{
+			ROS_ERROR("%s", buf);
 			continue;
 		}
 
