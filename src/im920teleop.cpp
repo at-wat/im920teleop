@@ -30,6 +30,7 @@ int main(int argc, char** argv)
 	if(fd < 0)
 	{
 		ROS_INFO("Cannot find device at %s. ", port_name.c_str());
+		ros::Duration(2.0).sleep();
 		return 0; 
 	}
 
@@ -118,6 +119,7 @@ int main(int argc, char** argv)
 	}
 
 	tcsetattr(fd, TCSANOW, &oldtio);
+	ros::Duration(1.5).sleep();
 	return 0;
 }
 
