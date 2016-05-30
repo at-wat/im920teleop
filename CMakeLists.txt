@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   geometry_msgs
+  ypspur_ros
 )
 
 catkin_package(
@@ -12,6 +13,7 @@ catkin_package(
   roscpp
   std_msgs
   geometry_msgs
+  ypspur_ros
 )
 
 include(CheckCXXCompilerFlag)
