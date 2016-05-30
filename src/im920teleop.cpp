@@ -15,6 +15,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
+#include <ypspur_ros/ControlMode.h>
 
 int main(int argc, char** argv)
 {
@@ -54,6 +55,7 @@ int main(int argc, char** argv)
 	ros::Time last_interrupt = ros::Time::now();
 
 	ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel_out", 1);
+	ros::Publisher pub_mode = nh.advertise<ypspur_ros::ControlMode>("/ypspur_ros/control_mode", 2);
 
 	const boost::function<void(const geometry_msgs::Twist::ConstPtr&)> cb = 
 		[&](const geometry_msgs::Twist::ConstPtr &msg)->void{
@@ -64,16 +66,23 @@ int main(int argc, char** argv)
 						(unsigned short)vel, (unsigned short)avel);
 				write(fd, buf, strlen(buf));
 			};
+	ypspur_ros::ControlMode mode;
+	const boost::function<void(const ypspur_ros::ControlMode::ConstPtr&)> cb_cm = 
+		[&](const ypspur_ros::ControlMode::ConstPtr &msg)->void{
+				mode = *msg;
+			};
 	const boost::function<void(const geometry_msgs::Twist::ConstPtr&)> cb_ow = 
 		[&](const geometry_msgs::Twist::ConstPtr &msg)->void{
 				if(ros::Time::now() - last_interrupt > ros::Duration(1.0))
 				{
 					pub.publish(*msg);
+					pub_mode.publish(mode);
 				}
 			};
 
 	ros::Subscriber sub = nh.subscribe("cmd_vel_in", 1, cb);
 	ros::Subscriber sub_ow = nh.subscribe("cmd_vel_overwritten", 1, cb_ow);
+	ros::Subscriber sub_cm = nh.subscribe("control_mode_in", 1, cb_cm);
 	
 	ros::Rate wait(4);
 	while(ros::ok())
@@ -116,6 +125,10 @@ int main(int argc, char** argv)
 		msg.linear.x = vel * 0.001;
 		msg.angular.z = avel * 0.001;
 		pub.publish(msg);
+
+		ypspur_ros::ControlMode mode;
+		mode.vehicle_control_mode = ypspur_ros::ControlMode::VELOCITY;
+		pub_mode.publish(mode);
 
 		last_interrupt = ros::Time::now();
 	}
