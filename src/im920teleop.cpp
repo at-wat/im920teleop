@@ -97,9 +97,10 @@ int main(int argc, char** argv)
 			ros::shutdown();
 			continue;
 		}
-		if(n_read != 22)
+		if(n_read != 24)
 		{
-			ROS_ERROR("%s", buf);
+			buf[n_read] = 0;
+			ROS_ERROR("[%d] %s", n_read, buf);
 			continue;
 		}
 
