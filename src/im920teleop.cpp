@@ -99,6 +99,7 @@ int main(int argc, char** argv)
 		}
 		if(n_read != 24)
 		{
+			if(n_read > 2 && buf[0] == 'O' && buf[1] == 'K') continue;
 			buf[n_read] = 0;
 			ROS_ERROR("[%d] %s", n_read, buf);
 			continue;
