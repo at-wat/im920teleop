@@ -127,7 +127,14 @@ int main(int argc, char** argv)
 		pub.publish(msg);
 
 		ypspur_ros::ControlMode mode;
-		mode.vehicle_control_mode = ypspur_ros::ControlMode::VELOCITY;
+		if(vel == 0 && avel == 0)
+		{
+			mode.vehicle_control_mode = ypspur_ros::ControlMode::OPEN;
+		}
+		else
+		{
+			mode.vehicle_control_mode = ypspur_ros::ControlMode::VELOCITY;
+		}
 		pub_mode.publish(mode);
 
 		last_interrupt = ros::Time::now();
