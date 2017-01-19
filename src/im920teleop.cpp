@@ -71,6 +71,22 @@ int main(int argc, char** argv)
 		[&](const ypspur_ros::ControlMode::ConstPtr &msg)->void{
 				mode = *msg;
 			};
+	const boost::function<void(const geometry_msgs::Twist::ConstPtr&)> cb_over = 
+		[&](const geometry_msgs::Twist::ConstPtr &msg)->void{
+				ypspur_ros::ControlMode mode;
+				if(msg->linear.x == 0.0 && msg->angular.z == 0.0)
+				{
+					mode.vehicle_control_mode = ypspur_ros::ControlMode::OPEN;
+				}
+				else
+				{
+					mode.vehicle_control_mode = ypspur_ros::ControlMode::VELOCITY;
+				}
+				pub_mode.publish(mode);
+				pub.publish(*msg);
+
+				last_interrupt = ros::Time::now();
+			};
 	const boost::function<void(const geometry_msgs::Twist::ConstPtr&)> cb_ow = 
 		[&](const geometry_msgs::Twist::ConstPtr &msg)->void{
 				if(ros::Time::now() - last_interrupt > ros::Duration(1.0))
@@ -81,6 +97,7 @@ int main(int argc, char** argv)
 			};
 
 	ros::Subscriber sub = nh.subscribe("cmd_vel_in", 1, cb);
+	ros::Subscriber sub_over = nh.subscribe("cmd_vel_over", 1, cb_over);
 	ros::Subscriber sub_ow = nh.subscribe("cmd_vel_overwritten", 1, cb_ow);
 	ros::Subscriber sub_cm = nh.subscribe("control_mode_in", 1, cb_cm);
 	
