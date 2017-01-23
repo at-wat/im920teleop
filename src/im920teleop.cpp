@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 	fd = open(port_name.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
 	if(fd < 0)
 	{
-		ROS_INFO("Cannot find device at %s. ", port_name.c_str());
+		ROS_ERROR("Cannot find device at %s. ", port_name.c_str());
 		ros::Duration(2.0).sleep();
 		return 0; 
 	}
