@@ -20,7 +20,7 @@
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "im920teleop");
-	ros::NodeHandle nh;
+	ros::NodeHandle nh("~");
 
 	int fd;
 	struct termios oldtio, newtio;
@@ -54,7 +54,7 @@ int main(int argc, char** argv)
 
 	ros::Time last_interrupt = ros::Time::now();
 
-	ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel_out", 1);
+	ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel_out", 1);
 	ros::Publisher pub_mode = nh.advertise<ypspur_ros::ControlMode>("/ypspur_ros/control_mode", 2);
 
 	const boost::function<void(const geometry_msgs::Twist::ConstPtr&)> cb = 
@@ -96,10 +96,10 @@ int main(int argc, char** argv)
 				}
 			};
 
-	ros::Subscriber sub = nh.subscribe("cmd_vel_in", 1, cb);
-	ros::Subscriber sub_over = nh.subscribe("cmd_vel_over", 1, cb_over);
-	ros::Subscriber sub_ow = nh.subscribe("cmd_vel_overwritten", 1, cb_ow);
-	ros::Subscriber sub_cm = nh.subscribe("control_mode_in", 1, cb_cm);
+	ros::Subscriber sub = nh.subscribe("/cmd_vel_in", 1, cb);
+	ros::Subscriber sub_over = nh.subscribe("/cmd_vel_over", 1, cb_over);
+	ros::Subscriber sub_ow = nh.subscribe("/cmd_vel_overwritten", 1, cb_ow);
+	ros::Subscriber sub_cm = nh.subscribe("/control_mode_in", 1, cb_cm);
 	
 	ros::Rate wait(4);
 	while(ros::ok())
