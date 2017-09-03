@@ -100,7 +100,20 @@ int main(int argc, char** argv)
 	ros::Subscriber sub_over = nh.subscribe("/cmd_vel_over", 1, cb_over);
 	ros::Subscriber sub_ow = nh.subscribe("/cmd_vel_overwritten", 1, cb_ow);
 	ros::Subscriber sub_cm = nh.subscribe("/control_mode_in", 1, cb_cm);
-	
+
+	{
+		const char *setting = "STCH 01\r\n";
+		write(fd, setting, strlen(setting));
+	}
+	{
+		const char *setting = "STRT 2\r\n";
+		write(fd, setting, strlen(setting));
+	}
+	{
+		const char *setting = "DCIO\r\n";
+		write(fd, setting, strlen(setting));
+	}
+
 	ros::Rate wait(4);
 	while(ros::ok())
 	{
