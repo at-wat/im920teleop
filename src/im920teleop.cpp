@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <vector>
+#include <string>
 
 #include <fcntl.h>
 #include <termios.h>
@@ -15,6 +17,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
+#include <std_msgs/String.h>
 #include <ypspur_ros/ControlMode.h>
 
 int main(int argc, char** argv)
@@ -56,13 +59,14 @@ int main(int argc, char** argv)
 
 	ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel_out", 1);
 	ros::Publisher pub_mode = nh.advertise<ypspur_ros::ControlMode>("/ypspur_ros/control_mode", 2);
+	ros::Publisher pub_str = nh.advertise<std_msgs::String>("/string_out", 2);
 
 	const boost::function<void(const geometry_msgs::Twist::ConstPtr&)> cb = 
 		[&](const geometry_msgs::Twist::ConstPtr &msg)->void{
 				char buf[256];
 				short vel = msg->linear.x * 1000;
 				short avel = msg->angular.z * 1000;
-				sprintf(buf, "TXDA %04X%04X\r\n", 
+				sprintf(buf, "TXDA 01%04X%04X\r\n", 
 						(unsigned short)vel, (unsigned short)avel);
 				write(fd, buf, strlen(buf));
 			};
@@ -95,11 +99,25 @@ int main(int argc, char** argv)
 					pub_mode.publish(mode);
 				}
 			};
+	const boost::function<void(const std_msgs::String::ConstPtr&)> cb_str = 
+		[&](const std_msgs::String::ConstPtr &msg)->void{
+				char buf[256];
+				strcpy(buf, "TXDA 02");
+				for(auto c : msg->data)
+				{
+					char byte[3];
+					sprintf(byte, "%02x", c);
+					strcat(buf, byte); 
+				}
+				strcat(buf, "\r\n"); 
+				write(fd, buf, strlen(buf));
+			};
 
 	ros::Subscriber sub = nh.subscribe("/cmd_vel_in", 1, cb);
 	ros::Subscriber sub_over = nh.subscribe("/cmd_vel_over", 1, cb_over);
 	ros::Subscriber sub_ow = nh.subscribe("/cmd_vel_overwritten", 1, cb_ow);
 	ros::Subscriber sub_cm = nh.subscribe("/control_mode_in", 1, cb_cm);
+	ros::Subscriber sub_str = nh.subscribe("/string", 1, cb_str);
 
 	{
 		const char *setting = "STCH 01\r\n";
@@ -136,38 +154,59 @@ int main(int argc, char** argv)
 			ros::shutdown();
 			continue;
 		}
-		if(n_read != 24)
+		const std::string str(buf, 0, n_read);
+
+		std::vector<unsigned int> val;
+
+		if(n_read < 11)
 		{
-			if(n_read > 2 && buf[0] == 'O' && buf[1] == 'K') continue;
-			buf[n_read] = 0;
-			ROS_ERROR("[%d] %s", n_read, buf);
 			continue;
 		}
-
-		geometry_msgs::Twist msg;
-		unsigned int val[4], dummy;
-		sscanf(buf, "%02X,%04X,%02X:%02X,%02X,%02X,%02X",
-				&dummy, &dummy, &dummy,
-				&val[0], &val[1], &val[2], &val[3]);
-		short vel, avel;
-		vel = (val[0] << 8) | val[1];
-		avel = (val[2] << 8) | val[3];
-		msg.linear.x = vel * 0.001;
-		msg.angular.z = avel * 0.001;
-		pub.publish(msg);
-
-		ypspur_ros::ControlMode mode;
-		if(vel == 0 && avel == 0)
+		// 01234567890123456789..
+		// 00,0000,00:00,00,00,...
+		for(int i = 11; i < n_read - 1; i += 3)
 		{
-			mode.vehicle_control_mode = ypspur_ros::ControlMode::OPEN;
+			const std::string val_str(str, i, 2);
+			unsigned int v = std::stoi("0x" + val_str, nullptr, 16);
+			val.push_back(v);
 		}
-		else
-		{
-			mode.vehicle_control_mode = ypspur_ros::ControlMode::VELOCITY;
-		}
-		pub_mode.publish(mode);
 
-		last_interrupt = ros::Time::now();
+		if(val[0] == 1)
+		{
+			geometry_msgs::Twist msg;
+			short vel, avel;
+			vel = (val[1] << 8) | val[2];
+			avel = (val[3] << 8) | val[4];
+			msg.linear.x = vel * 0.001;
+			msg.angular.z = avel * 0.001;
+			pub.publish(msg);
+
+			ypspur_ros::ControlMode mode;
+			if(vel == 0 && avel == 0)
+			{
+				mode.vehicle_control_mode = ypspur_ros::ControlMode::OPEN;
+			}
+			else
+			{
+				mode.vehicle_control_mode = ypspur_ros::ControlMode::VELOCITY;
+			}
+			pub_mode.publish(mode);
+
+			last_interrupt = ros::Time::now();
+		}
+		else if(val[0] == 2)
+		{
+			std_msgs::String msg;
+
+			for(auto &c: val)
+			{
+				char ch[2];
+				ch[0] = c;
+				ch[1] = 0;
+				msg.data += std::string(ch);
+			}
+			pub_str.publish(msg);
+		}
 	}
 
 	tcsetattr(fd, TCSANOW, &oldtio);
